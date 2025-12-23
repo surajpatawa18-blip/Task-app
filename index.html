@@ -13,43 +13,34 @@
 <style>
 :root{--o:#ff6a00}
 *{box-sizing:border-box;font-family:Arial}
-body{margin:0;height:100vh;background:#f2f2f2}
-.app{height:100vh;background:white;display:flex;flex-direction:column}
-
+body{margin:0;background:#f2f2f2}
+.app{min-height:100vh;background:#fff}
 .header{
- height:56px;background:var(--o);color:white;
- display:flex;align-items:center;justify-content:space-between;
- padding:0 16px;font-size:18px
+ background:var(--o);color:#fff;
+ padding:14px 16px;font-size:18px;
+ display:flex;justify-content:space-between;align-items:center
 }
-.dots{font-size:26px;cursor:pointer}
-
-.screen{display:none;flex:1;overflow:auto}
+.screen{display:none}
 .show{display:block}
-
 .wallet{
- margin:16px;
+ margin:16px;padding:20px;border-radius:16px;
  background:linear-gradient(135deg,#ff6a00,#ff944d);
- color:white;padding:20px;border-radius:16px;text-align:center
+ color:#fff;text-align:center
 }
-
 button{
  width:90%;margin:10px auto;padding:12px;
  border:none;border-radius:10px;
- background:var(--o);color:white;font-weight:bold;display:block
+ background:var(--o);color:#fff;font-weight:bold;display:block
 }
 input{
- width:100%;padding:12px;margin-top:12px;
+ width:100%;padding:12px;margin-top:10px;
  border:1px solid #ddd;border-radius:10px
 }
-
-.menuPanel{
- position:fixed;bottom:-100%;left:0;width:100%;
- background:white;border-radius:20px 20px 0 0;
- box-shadow:0 -5px 20px rgba(0,0,0,.2);
- transition:.3s;padding:20px
+.list{padding:10px}
+.row{
+ background:#fff;margin-bottom:8px;padding:10px;
+ border-radius:8px;display:flex;justify-content:space-between
 }
-.menuPanel.showMenu{bottom:0}
-.menuItem{padding:15px;border-bottom:1px solid #eee;font-size:16px}
 </style>
 </head>
 
@@ -68,50 +59,81 @@ input{
  </div>
 </div>
 
-<!-- 🔒 PRO UNLOCK SCREEN -->
+<!-- 🔒 PAID UNLOCK -->
 <div class="screen" id="unlockScreen">
  <div class="header">Activate Pro</div>
  <div style="padding:20px;text-align:center">
   <h2>₹1299 One-Time Payment</h2>
-
-  <p>Scan & Pay</p>
-  <!-- QR CODE IMAGE -->
-  <img src="qr.png" style="
-   width:220px;
-   margin:15px auto;
-   display:block;
-   border-radius:12px;
-   box-shadow:0 5px 15px rgba(0,0,0,.2)
-  ">
-
-  <p>UPI ID: <b>yourupi@bank</b></p>
-
+  <img src="qr.png" style="width:220px;border-radius:12px">
   <input id="utrInput" placeholder="Enter UTR Number">
   <button onclick="submitDeposit()">Submit Payment</button>
-
-  <p style="font-size:13px;color:#777">
-   Approval ke baad app unlock hoga
-  </p>
+  <p style="font-size:13px;color:#777">Approval ke baad unlock hoga</p>
  </div>
 </div>
 
 <!-- DASHBOARD -->
 <div class="screen" id="dashboardScreen">
- <div class="header">
-  <span>Dashboard</span>
-  <span class="dots" onclick="toggleMenu()">⋮</span>
- </div>
+ <div class="header">Dashboard</div>
 
  <div class="wallet">
   <div>Balance</div>
   <h1>₹ <span id="coins">0</span></h1>
  </div>
+
+ <button onclick="openSpin()">🎡 Spin</button>
+ <button onclick="openRefer()">👥 Refer</button>
+ <button onclick="openLeaderboard()">🏆 Leaderboard</button>
+ <button onclick="openWithdraw()">💸 Withdraw</button>
+ <button onclick="logout()">Logout</button>
+</div>
+
+<!-- SPIN -->
+<div class="screen" id="spinScreen">
+ <div class="header">Spin</div>
+ <div style="text-align:center">
+  <div id="wheel" style="
+   width:240px;height:240px;margin:20px auto;border-radius:50%;
+   border:8px solid #ff6a00;
+   background:conic-gradient(#ffd000 0 45deg,#ff6a00 45 90deg,
+   #ffd000 90 135deg,#ff6a00 135 180deg,
+   #ffd000 180 225deg,#ff6a00 225 270deg,
+   #ffd000 270 315deg,#ff6a00 315 360deg);
+   transition:transform 6s ease-out
+  "></div>
+  <button onclick="spin()">SPIN NOW</button>
+  <button onclick="openDashboard()">Back</button>
+ </div>
+</div>
+
+<!-- REFER -->
+<div class="screen" id="referScreen">
+ <div class="header">Refer & Earn</div>
+ <div style="padding:20px">
+  <input id="myRef" readonly>
+  <input id="refLink" readonly>
+  <button onclick="copyRef()">Copy Link</button>
+  <p>₹3 per referral</p>
+ </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="screen" id="leaderScreen">
+ <div class="header">Leaderboard</div>
+ <div class="list" id="leaderList"></div>
+ <button onclick="openDashboard()">Back</button>
+</div>
+
+<!-- WITHDRAW -->
+<div class="screen" id="withdrawScreen">
+ <div class="header">Withdraw</div>
+ <input id="wdAmount" placeholder="Min ₹20">
+ <button onclick="withdraw()">Request Withdraw</button>
+ <button onclick="openDashboard()">Back</button>
 </div>
 
 </div>
 
 <script>
-/* FIREBASE CONFIG */
 firebase.initializeApp({
  apiKey:"AIzaSyArCdfGSLZQi8CBbw7is71kxB5036Wlj5E",
  authDomain:"calling-98df6.firebaseapp.com",
@@ -119,147 +141,143 @@ firebase.initializeApp({
  projectId:"calling-98df6"
 });
 
-const auth = firebase.auth();
-const db = firebase.database();
-let uid = null;
+const auth=firebase.auth(), db=firebase.database();
+let uid=null;
 
-/* AUTH STATE */
+/* GET REF FROM LINK */
+const params=new URLSearchParams(window.location.search);
+const refFromLink=params.get("ref");
+
+/* AUTH */
 auth.onAuthStateChanged(u=>{
- if(!u){
-  showScreen("loginScreen");
-  return;
- }
- uid = u.uid;
-
- db.ref("users/"+uid+"/paid").once("value",snap=>{
-  if(snap.val() === true){
-   showScreen("dashboardScreen");
-   loadUser();
-  }else{
-   showScreen("unlockScreen");
-  }
+ if(!u){show("loginScreen");return;}
+ uid=u.uid;
+ db.ref("users/"+uid+"/paid").once("value",s=>{
+  if(s.val()===true){show("dashboardScreen");loadUser();loadLeaderboard();}
+  else show("unlockScreen");
  });
 });
 
-function showScreen(id){
+function show(id){
  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("show"));
  document.getElementById(id).classList.add("show");
 }
 
-/* LOGIN */
-function login(){
- auth.signInWithEmailAndPassword(email.value,password.value)
- .catch(e=>alert(e.message));
-}
+/* NAV */
+const openDashboard=()=>show("dashboardScreen");
+const openSpin=()=>show("spinScreen");
+const openRefer=()=>show("referScreen");
+const openLeaderboard=()=>show("leaderScreen");
+const openWithdraw=()=>show("withdrawScreen");
 
-/* SIGNUP */
+/* LOGIN / SIGNUP */
+function login(){
+ auth.signInWithEmailAndPassword(email.value,password.value);
+}
 function signup(){
  auth.createUserWithEmailAndPassword(email.value,password.value)
  .then(r=>{
-  const code = r.user.uid.slice(0,6).toUpperCase();
+  const code=r.user.uid.slice(0,6).toUpperCase();
   db.ref("users/"+r.user.uid).set({
-   coins:0,
+   coins:0,paid:false,
    referralCode:code,
+   referralCount:0,
+   referredBy:refFromLink||"",
    lastSpinDate:"",
-   lastWithdrawDate:"",
-   paid:false
+   lastWithdrawDate:""
   });
+
+  if(refFromLink) rewardReferrer(refFromLink);
  });
 }
 
-/* USER DATA */
+/* USER */
 function loadUser(){
- db.ref("users/"+uid).on("value",snap=>{
-  coins.innerText = snap.val().coins || 0;
+ db.ref("users/"+uid).on("value",s=>{
+  coins.innerText=s.val().coins||0;
+  myRef.value=s.val().referralCode;
+  refLink.value=location.origin+location.pathname+"?ref="+s.val().referralCode;
  });
 }
 
-/* 🔒 ANTI-SPAM DEPOSIT SUBMIT */
-function submitDeposit(){
- const utr = utrInput.value.trim();
- if(utr.length < 8){
-  alert("Valid UTR enter karo");
-  return;
- }
-
- // 1️⃣ Same UTR reuse block
- db.ref("utrUsed/"+utr).once("value",uSnap=>{
-  if(uSnap.exists()){
-   alert("❌ Ye UTR already use ho chuka hai");
-   return;
-  }
-
-  // 2️⃣ One pending deposit per user
-  db.ref("deposits").orderByChild("uid").equalTo(uid)
-  .once("value",snap=>{
-   let pending=false;
-   snap.forEach(d=>{
-    if(d.val().status==="pending") pending=true;
-   });
-
-   if(pending){
-    alert("❌ Aapka ek deposit already pending hai");
-    return;
+/* REFERRAL REWARD */
+function rewardReferrer(code){
+ db.ref("users").once("value",snap=>{
+  snap.forEach(u=>{
+   if(u.val().referralCode===code){
+    db.ref("users/"+u.key).update({
+     coins:(u.val().coins||0)+3,
+     referralCount:(u.val().referralCount||0)+1
+    });
    }
+  });
+ });
+}
+function copyRef(){
+ navigator.clipboard.writeText(refLink.value);
+ alert("Referral link copied");
+}
 
-   // ✅ Allow deposit
-   db.ref("deposits").push({
-    uid:uid,
-    utr:utr,
-    amount:1299,
-    status:"pending",
-    time:Date.now()
-   });
-
-   db.ref("utrUsed/"+utr).set(true);
-
-   alert("✅ Payment submitted. Approval pending.");
+/* LEADERBOARD */
+function loadLeaderboard(){
+ db.ref("users").orderByChild("referralCount").limitToLast(10)
+ .on("value",snap=>{
+  leaderList.innerHTML="";
+  snap.forEach(u=>{
+   leaderList.innerHTML=
+    `<div class="row">
+      <span>${u.val().referralCode}</span>
+      <b>${u.val().referralCount||0}</b>
+     </div>`+leaderList.innerHTML;
   });
  });
 }
 
-/* 🔒 DAILY WITHDRAW LIMIT */
+/* SPIN */
+function spin(){
+ const today=new Date().toDateString();
+ const r=db.ref("users/"+uid);
+ r.once("value",s=>{
+  if(s.val().lastSpinDate===today){alert("Aaj spin ho chuka");return;}
+  const win=Math.floor(Math.random()*8)+1;
+  wheel.style.transform=`rotate(${360*5+45*(win-1)}deg)`;
+  setTimeout(()=>{
+   r.update({coins:s.val().coins+win,lastSpinDate:today});
+   alert("You won ₹"+win);
+  },6000);
+ });
+}
+
+/* WITHDRAW */
 function withdraw(){
- const amt = parseInt(wdAmount.value);
- if(amt < 20){
-  alert("Min ₹20");
-  return;
- }
-
- const today = new Date().toDateString();
- const r = db.ref("users/"+uid);
-
- r.once("value",snap=>{
-  const d = snap.val();
-
-  if(d.lastWithdrawDate === today){
-   alert("❌ Aaj already withdrawal request kar chuke ho");
-   return;
-  }
-
-  if(d.coins < amt){
-   alert("Low balance");
-   return;
-  }
-
+ const amt=parseInt(wdAmount.value);
+ if(amt<20)return alert("Min ₹20");
+ const r=db.ref("users/"+uid);
+ r.once("value",s=>{
+  if(s.val().coins<amt)return alert("Low balance");
+  if(s.val().lastWithdrawDate===new Date().toDateString())
+   return alert("Aaj already withdraw");
   r.update({
-   coins: d.coins - amt,
-   lastWithdrawDate: today
+   coins:s.val().coins-amt,
+   lastWithdrawDate:new Date().toDateString()
   });
-
-  db.ref("withdrawals").push({
-   uid:uid,
-   amount:amt,
-   status:"pending",
-   time:Date.now()
-  });
-
-  alert("Withdrawal request sent");
+  db.ref("withdrawals").push({uid,amount:amt,status:"pending"});
+  alert("Withdraw requested");
  });
 }
 
-/* MENU */
-function toggleMenu(){menuPanel.classList.toggle("showMenu")}
+/* DEPOSIT (ANTI-SPAM) */
+function submitDeposit(){
+ const utr=utrInput.value.trim();
+ if(utr.length<8)return alert("Valid UTR");
+ db.ref("utrUsed/"+utr).once("value",u=>{
+  if(u.exists())return alert("UTR already used");
+  db.ref("deposits").push({uid,utr,amount:1299,status:"pending"});
+  db.ref("utrUsed/"+utr).set(true);
+  alert("Payment submitted");
+ });
+}
+
 function logout(){auth.signOut()}
 </script>
 
