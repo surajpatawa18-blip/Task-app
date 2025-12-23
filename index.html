@@ -35,6 +35,23 @@ body{margin:0;height:100vh;background:#f2f2f2}
  color:white;padding:20px;border-radius:16px;text-align:center
 }
 
+/* SLIDER */
+.slider{
+ margin:0 16px 16px;
+ overflow:hidden;border-radius:14px;position:relative
+}
+.slides{display:flex;transition:transform .5s ease}
+.slides img{width:100%;flex-shrink:0;border-radius:14px}
+.dotsWrap{
+ position:absolute;bottom:8px;left:0;right:0;
+ display:flex;justify-content:center
+}
+.dotsWrap span{
+ width:8px;height:8px;border-radius:50%;
+ background:#fff;opacity:.5;margin:0 4px
+}
+.dotsWrap .active{opacity:1;background:#ff6a00}
+
 /* INPUT / BUTTON */
 button{
  width:90%;margin:10px auto;padding:12px;
@@ -61,17 +78,9 @@ input{
 .spinBox{text-align:center;margin-top:20px}
 #wheelImg{
  width:260px;height:260px;border-radius:50%;
- transition:transform 10s ease-out;
+ transition:transform 10s ease-out
 }
 .pointer{font-size:30px}
-
-/* LIST */
-.list{padding:10px}
-.row{
- display:flex;justify-content:space-between;
- padding:10px;background:#fff;margin-bottom:8px;
- border-radius:10px
-}
 </style>
 </head>
 
@@ -102,6 +111,16 @@ input{
   <div>Balance</div>
   <h1>₹ <span id="coins">0</span></h1>
  </div>
+
+ <!-- SLIDER -->
+ <div class="slider">
+  <div class="slides" id="slides">
+   <img src="slide1.png">
+   <img src="slide2.png">
+   <img src="slide3.png">
+  </div>
+  <div class="dotsWrap" id="dotsWrap"></div>
+ </div>
 </div>
 
 <!-- SPIN -->
@@ -110,7 +129,6 @@ input{
   <span>Spin & Earn</span>
   <span onclick="showDashboard()">✕</span>
  </div>
-
  <div class="spinBox">
   <div class="pointer">⬇️</div>
   <img id="wheelImg" src="spin.png">
@@ -135,12 +153,8 @@ input{
   <span onclick="showDashboard()">✕</span>
  </div>
  <div style="padding:20px">
-  <p>Your Referral Code</p>
   <input id="myRef" readonly>
-
-  <p>Your Referral Link</p>
   <input id="refLink" readonly>
-
   <button onclick="shareReferral()">Share Link</button>
  </div>
 </div>
@@ -173,7 +187,7 @@ input{
 <audio id="winSound" src="win.mp3"></audio>
 
 <script>
-/* 🔥 FIREBASE CONFIG */
+/* FIREBASE CONFIG */
 firebase.initializeApp({
  apiKey:"AIzaSyArCdfGSLZQi8CBbw7is71kxB5036Wlj5E",
  authDomain:"calling-98df6.firebaseapp.com",
@@ -187,29 +201,21 @@ const db=firebase.database();
 const spinSound=document.getElementById("spinSound");
 const winSound=document.getElementById("winSound");
 
-let uid=null;
-let spinning=false;
+let uid=null,spinning=false;
 
 /* REF FROM LINK */
 const params=new URLSearchParams(window.location.search);
 const refFromLink=params.get("ref");
 if(refFromLink){
  document.addEventListener("DOMContentLoaded",()=>{
-  if(document.getElementById("refInput")){
-   refInput.value=refFromLink;
-  }
+  if(refInput) refInput.value=refFromLink;
  });
 }
 
 /* AUTH */
 auth.onAuthStateChanged(u=>{
- if(u){
-  uid=u.uid;
-  showDashboard();
-  loadUser();
- }else{
-  showLogin();
- }
+ if(u){uid=u.uid;showDashboard();loadUser();initSlider()}
+ else showLogin();
 });
 
 /* NAV */
@@ -231,16 +237,11 @@ function login(){
  auth.signInWithEmailAndPassword(email.value,password.value)
  .catch(e=>alert(e.message));
 }
-
 function signup(){
  auth.createUserWithEmailAndPassword(email.value,password.value)
  .then(r=>{
   const code=r.user.uid.substring(0,6).toUpperCase();
-  db.ref("users/"+r.user.uid).set({
-   coins:0,
-   referralCode:code,
-   lastSpinDate:""
-  });
+  db.ref("users/"+r.user.uid).set({coins:0,referralCode:code,lastSpinDate:""});
   alert("Signup successful");
  });
 }
@@ -248,27 +249,20 @@ function signup(){
 /* LOAD USER */
 function loadUser(){
  db.ref("users/"+uid).on("value",s=>{
-  if(!s.exists())return;
   coins.innerText=s.val().coins||0;
   if(myRef) myRef.value=s.val().referralCode;
   if(refLink) refLink.value=getReferralLink(s.val().referralCode);
  });
 }
 
-/* REF LINK (GitHub Pages compatible) */
+/* REF LINK */
 function getReferralLink(code){
- const baseURL="https://surajpatawa18-blip.github.io/Task-app/";
- return baseURL+"?ref="+code;
+ return "https://surajpatawa18-blip.github.io/Task-app/?ref="+code;
 }
-
 function shareReferral(){
- const link=refLink.value;
- if(navigator.share){
-  navigator.share({title:"Earn Money App",text:"Join & earn",url:link});
- }else{
-  navigator.clipboard.writeText(link);
-  alert("Link copied");
- }
+ navigator.share
+ ? navigator.share({title:"Earn Money App",url:refLink.value})
+ : navigator.clipboard.writeText(refLink.value);
 }
 
 /* ADD COINS */
@@ -278,33 +272,22 @@ function addCoins(v){
  });
 }
 
-/* 🎡 SPIN (Daily 1 time) */
+/* SPIN */
 function spinWheel(){
  if(spinning)return;
  const today=new Date().toDateString();
- const ref=db.ref("users/"+uid);
-
- ref.once("value",snap=>{
-  if(snap.val().lastSpinDate===today){
-   alert("Aaj ka spin already ho chuka hai");
-   return;
-  }
-
+ const r=db.ref("users/"+uid);
+ r.once("value",snap=>{
+  if(snap.val().lastSpinDate===today){alert("Aaj ka spin ho chuka");return;}
   spinning=true;
-  const result=Math.floor(Math.random()*8)+1;
-  const deg=(360*5)+(45*(result-1))+22.5;
-
-  spinSound.currentTime=0;
+  const win=Math.floor(Math.random()*8)+1;
+  const deg=(360*5)+(45*(win-1))+22.5;
   spinSound.play();
   wheelImg.style.transform=`rotate(${deg}deg)`;
-
   setTimeout(()=>{
-   spinSound.pause();
-   winSound.play();
-   addCoins(result);
-   ref.child("lastSpinDate").set(today);
-   alert("You won ₹"+result);
-   spinning=false;
+   spinSound.pause();winSound.play();
+   addCoins(win);r.child("lastSpinDate").set(today);
+   alert("You won ₹"+win);spinning=false;
   },10000);
  });
 }
@@ -321,8 +304,27 @@ function withdraw(){
   alert("Withdraw requested");
  });
 }
-
 function logout(){auth.signOut()}
+
+/* SLIDER LOGIC */
+let slideIndex=0;
+function initSlider(){
+ const slides=document.getElementById("slides");
+ const dots=document.getElementById("dotsWrap");
+ if(!slides)return;
+ const total=slides.children.length;
+ dots.innerHTML="";
+ for(let i=0;i<total;i++){
+  const d=document.createElement("span");
+  if(i===0)d.classList.add("active");
+  dots.appendChild(d);
+ }
+ setInterval(()=>{
+  slideIndex=(slideIndex+1)%total;
+  slides.style.transform=`translateX(-${slideIndex*100}%)`;
+  [...dots.children].forEach((d,i)=>d.classList.toggle("active",i===slideIndex));
+ },3000);
+}
 </script>
 
 </body>
