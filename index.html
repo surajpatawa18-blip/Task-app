@@ -16,7 +16,6 @@
 body{margin:0;height:100vh;background:#f2f2f2}
 .app{height:100vh;background:white;display:flex;flex-direction:column}
 
-/* HEADER */
 .header{
  height:56px;background:var(--o);color:white;
  display:flex;align-items:center;justify-content:space-between;
@@ -24,35 +23,15 @@ body{margin:0;height:100vh;background:#f2f2f2}
 }
 .dots{font-size:26px;cursor:pointer}
 
-/* SCREENS */
 .screen{display:none;flex:1;overflow:auto}
 .show{display:block}
 
-/* WALLET */
 .wallet{
  margin:16px;
  background:linear-gradient(135deg,#ff6a00,#ff944d);
  color:white;padding:20px;border-radius:16px;text-align:center
 }
 
-/* SLIDER */
-.slider{
- margin:0 16px 16px;
- overflow:hidden;border-radius:14px;position:relative
-}
-.slides{display:flex;transition:transform .5s ease}
-.slides img{width:100%;flex-shrink:0;border-radius:14px}
-.dotsWrap{
- position:absolute;bottom:8px;left:0;right:0;
- display:flex;justify-content:center
-}
-.dotsWrap span{
- width:8px;height:8px;border-radius:50%;
- background:#fff;opacity:.5;margin:0 4px
-}
-.dotsWrap .active{opacity:1;background:#ff6a00}
-
-/* INPUT / BUTTON */
 button{
  width:90%;margin:10px auto;padding:12px;
  border:none;border-radius:10px;
@@ -63,7 +42,6 @@ input{
  border:1px solid #ddd;border-radius:10px
 }
 
-/* MENU PANEL */
 .menuPanel{
  position:fixed;bottom:-100%;left:0;width:100%;
  background:white;border-radius:20px 20px 0 0;
@@ -72,20 +50,10 @@ input{
 }
 .menuPanel.showMenu{bottom:0}
 .menuItem{padding:15px;border-bottom:1px solid #eee;font-size:16px}
-.menuItem:last-child{border:none}
-
-/* SPIN */
-.spinBox{text-align:center;margin-top:20px}
-#wheelImg{
- width:260px;height:260px;border-radius:50%;
- transition:transform 10s ease-out
-}
-.pointer{font-size:30px}
 </style>
 </head>
 
 <body>
-
 <div class="app">
 
 <!-- LOGIN -->
@@ -100,6 +68,33 @@ input{
  </div>
 </div>
 
+<!-- 🔒 PRO UNLOCK SCREEN -->
+<div class="screen" id="unlockScreen">
+ <div class="header">Activate Pro</div>
+ <div style="padding:20px;text-align:center">
+  <h2>₹1299 One-Time Payment</h2>
+
+  <p>Scan & Pay</p>
+  <!-- QR CODE IMAGE -->
+  <img src="qr.png" style="
+   width:220px;
+   margin:15px auto;
+   display:block;
+   border-radius:12px;
+   box-shadow:0 5px 15px rgba(0,0,0,.2)
+  ">
+
+  <p>UPI ID: <b>yourupi@bank</b></p>
+
+  <input id="utrInput" placeholder="Enter UTR Number">
+  <button onclick="submitDeposit()">Submit Payment</button>
+
+  <p style="font-size:13px;color:#777">
+   Approval ke baad app unlock hoga
+  </p>
+ </div>
+</div>
+
 <!-- DASHBOARD -->
 <div class="screen" id="dashboardScreen">
  <div class="header">
@@ -111,80 +106,9 @@ input{
   <div>Balance</div>
   <h1>₹ <span id="coins">0</span></h1>
  </div>
-
- <!-- SLIDER -->
- <div class="slider">
-  <div class="slides" id="slides">
-   <img src="slide1.png">
-   <img src="slide2.png">
-   <img src="slide3.png">
-  </div>
-  <div class="dotsWrap" id="dotsWrap"></div>
- </div>
-</div>
-
-<!-- SPIN -->
-<div class="screen" id="spinScreen">
- <div class="header">
-  <span>Spin & Earn</span>
-  <span onclick="showDashboard()">✕</span>
- </div>
- <div class="spinBox">
-  <div class="pointer">⬇️</div>
-  <img id="wheelImg" src="spin.png">
-  <button onclick="spinWheel()">SPIN NOW</button>
- </div>
-</div>
-
-<!-- TASKS -->
-<div class="screen" id="taskScreen">
- <div class="header">
-  <span>Tasks</span>
-  <span onclick="showDashboard()">✕</span>
- </div>
- <button onclick="addCoins(10)">Join Telegram (+10)</button>
- <button onclick="addCoins(10)">Follow Instagram (+10)</button>
-</div>
-
-<!-- REFER -->
-<div class="screen" id="referScreen">
- <div class="header">
-  <span>Refer & Earn</span>
-  <span onclick="showDashboard()">✕</span>
- </div>
- <div style="padding:20px">
-  <input id="myRef" readonly>
-  <input id="refLink" readonly>
-  <button onclick="shareReferral()">Share Link</button>
- </div>
-</div>
-
-<!-- WITHDRAW -->
-<div class="screen" id="withdrawScreen">
- <div class="header">
-  <span>Withdraw</span>
-  <span onclick="showDashboard()">✕</span>
- </div>
- <div style="padding:20px">
-  <input id="wdAmount" placeholder="Min ₹20">
-  <button onclick="withdraw()">Request Withdraw</button>
- </div>
 </div>
 
 </div>
-
-<!-- MENU -->
-<div class="menuPanel" id="menuPanel">
- <div class="menuItem" onclick="openSpin()">🎡 Spin</div>
- <div class="menuItem" onclick="openTasks()">✅ Tasks</div>
- <div class="menuItem" onclick="openRefer()">👥 Refer</div>
- <div class="menuItem" onclick="openWithdraw()">💸 Withdraw</div>
- <div class="menuItem" onclick="logout()">🚪 Logout</div>
-</div>
-
-<!-- AUDIO -->
-<audio id="spinSound" src="spin.mp3"></audio>
-<audio id="winSound" src="win.mp3"></audio>
 
 <script>
 /* FIREBASE CONFIG */
@@ -192,139 +116,151 @@ firebase.initializeApp({
  apiKey:"AIzaSyArCdfGSLZQi8CBbw7is71kxB5036Wlj5E",
  authDomain:"calling-98df6.firebaseapp.com",
  databaseURL:"https://calling-98df6-default-rtdb.firebaseio.com",
- projectId:"calling-98df6",
- appId:"1:421742710154:web:8ac1621ab81b45edd2cc73"
+ projectId:"calling-98df6"
 });
 
-const auth=firebase.auth();
-const db=firebase.database();
-const spinSound=document.getElementById("spinSound");
-const winSound=document.getElementById("winSound");
+const auth = firebase.auth();
+const db = firebase.database();
+let uid = null;
 
-let uid=null,spinning=false;
-
-/* REF FROM LINK */
-const params=new URLSearchParams(window.location.search);
-const refFromLink=params.get("ref");
-if(refFromLink){
- document.addEventListener("DOMContentLoaded",()=>{
-  if(refInput) refInput.value=refFromLink;
- });
-}
-
-/* AUTH */
+/* AUTH STATE */
 auth.onAuthStateChanged(u=>{
- if(u){uid=u.uid;showDashboard();loadUser();initSlider()}
- else showLogin();
+ if(!u){
+  showScreen("loginScreen");
+  return;
+ }
+ uid = u.uid;
+
+ db.ref("users/"+uid+"/paid").once("value",snap=>{
+  if(snap.val() === true){
+   showScreen("dashboardScreen");
+   loadUser();
+  }else{
+   showScreen("unlockScreen");
+  }
+ });
 });
 
-/* NAV */
-function showLogin(){switchScreen("loginScreen")}
-function showDashboard(){switchScreen("dashboardScreen");hideMenu()}
-function openSpin(){switchScreen("spinScreen");hideMenu()}
-function openTasks(){switchScreen("taskScreen");hideMenu()}
-function openRefer(){switchScreen("referScreen");hideMenu()}
-function openWithdraw(){switchScreen("withdrawScreen");hideMenu()}
-function switchScreen(id){
+function showScreen(id){
  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("show"));
  document.getElementById(id).classList.add("show");
 }
-function toggleMenu(){menuPanel.classList.toggle("showMenu")}
-function hideMenu(){menuPanel.classList.remove("showMenu")}
 
-/* LOGIN / SIGNUP */
+/* LOGIN */
 function login(){
  auth.signInWithEmailAndPassword(email.value,password.value)
  .catch(e=>alert(e.message));
 }
+
+/* SIGNUP */
 function signup(){
  auth.createUserWithEmailAndPassword(email.value,password.value)
  .then(r=>{
-  const code=r.user.uid.substring(0,6).toUpperCase();
-  db.ref("users/"+r.user.uid).set({coins:0,referralCode:code,lastSpinDate:""});
-  alert("Signup successful");
+  const code = r.user.uid.slice(0,6).toUpperCase();
+  db.ref("users/"+r.user.uid).set({
+   coins:0,
+   referralCode:code,
+   lastSpinDate:"",
+   lastWithdrawDate:"",
+   paid:false
+  });
  });
 }
 
-/* LOAD USER */
+/* USER DATA */
 function loadUser(){
- db.ref("users/"+uid).on("value",s=>{
-  coins.innerText=s.val().coins||0;
-  if(myRef) myRef.value=s.val().referralCode;
-  if(refLink) refLink.value=getReferralLink(s.val().referralCode);
+ db.ref("users/"+uid).on("value",snap=>{
+  coins.innerText = snap.val().coins || 0;
  });
 }
 
-/* REF LINK */
-function getReferralLink(code){
- return "https://surajpatawa18-blip.github.io/Task-app/?ref="+code;
-}
-function shareReferral(){
- navigator.share
- ? navigator.share({title:"Earn Money App",url:refLink.value})
- : navigator.clipboard.writeText(refLink.value);
-}
-
-/* ADD COINS */
-function addCoins(v){
- db.ref("users/"+uid+"/coins").once("value",s=>{
-  db.ref("users/"+uid+"/coins").set((s.val()||0)+v);
- });
-}
-
-/* SPIN */
-function spinWheel(){
- if(spinning)return;
- const today=new Date().toDateString();
- const r=db.ref("users/"+uid);
- r.once("value",snap=>{
-  if(snap.val().lastSpinDate===today){alert("Aaj ka spin ho chuka");return;}
-  spinning=true;
-  const win=Math.floor(Math.random()*8)+1;
-  const deg=(360*5)+(45*(win-1))+22.5;
-  spinSound.play();
-  wheelImg.style.transform=`rotate(${deg}deg)`;
-  setTimeout(()=>{
-   spinSound.pause();winSound.play();
-   addCoins(win);r.child("lastSpinDate").set(today);
-   alert("You won ₹"+win);spinning=false;
-  },10000);
- });
-}
-
-/* WITHDRAW */
-function withdraw(){
- const amt=parseInt(wdAmount.value);
- if(amt<20)return alert("Min ₹20");
- const r=db.ref("users/"+uid);
- r.once("value",s=>{
-  if(s.val().coins<amt)return alert("Low balance");
-  r.child("coins").set(s.val().coins-amt);
-  db.ref("withdrawals").push({uid,amount:amt,status:"pending"});
-  alert("Withdraw requested");
- });
-}
-function logout(){auth.signOut()}
-
-/* SLIDER LOGIC */
-let slideIndex=0;
-function initSlider(){
- const slides=document.getElementById("slides");
- const dots=document.getElementById("dotsWrap");
- if(!slides)return;
- const total=slides.children.length;
- dots.innerHTML="";
- for(let i=0;i<total;i++){
-  const d=document.createElement("span");
-  if(i===0)d.classList.add("active");
-  dots.appendChild(d);
+/* 🔒 ANTI-SPAM DEPOSIT SUBMIT */
+function submitDeposit(){
+ const utr = utrInput.value.trim();
+ if(utr.length < 8){
+  alert("Valid UTR enter karo");
+  return;
  }
- setInterval(()=>{
-  slideIndex=(slideIndex+1)%total;
-  slides.style.transform=`translateX(-${slideIndex*100}%)`;
-  [...dots.children].forEach((d,i)=>d.classList.toggle("active",i===slideIndex));
- },3000);
+
+ // 1️⃣ Same UTR reuse block
+ db.ref("utrUsed/"+utr).once("value",uSnap=>{
+  if(uSnap.exists()){
+   alert("❌ Ye UTR already use ho chuka hai");
+   return;
+  }
+
+  // 2️⃣ One pending deposit per user
+  db.ref("deposits").orderByChild("uid").equalTo(uid)
+  .once("value",snap=>{
+   let pending=false;
+   snap.forEach(d=>{
+    if(d.val().status==="pending") pending=true;
+   });
+
+   if(pending){
+    alert("❌ Aapka ek deposit already pending hai");
+    return;
+   }
+
+   // ✅ Allow deposit
+   db.ref("deposits").push({
+    uid:uid,
+    utr:utr,
+    amount:1299,
+    status:"pending",
+    time:Date.now()
+   });
+
+   db.ref("utrUsed/"+utr).set(true);
+
+   alert("✅ Payment submitted. Approval pending.");
+  });
+ });
 }
+
+/* 🔒 DAILY WITHDRAW LIMIT */
+function withdraw(){
+ const amt = parseInt(wdAmount.value);
+ if(amt < 20){
+  alert("Min ₹20");
+  return;
+ }
+
+ const today = new Date().toDateString();
+ const r = db.ref("users/"+uid);
+
+ r.once("value",snap=>{
+  const d = snap.val();
+
+  if(d.lastWithdrawDate === today){
+   alert("❌ Aaj already withdrawal request kar chuke ho");
+   return;
+  }
+
+  if(d.coins < amt){
+   alert("Low balance");
+   return;
+  }
+
+  r.update({
+   coins: d.coins - amt,
+   lastWithdrawDate: today
+  });
+
+  db.ref("withdrawals").push({
+   uid:uid,
+   amount:amt,
+   status:"pending",
+   time:Date.now()
+  });
+
+  alert("Withdrawal request sent");
+ });
+}
+
+/* MENU */
+function toggleMenu(){menuPanel.classList.toggle("showMenu")}
+function logout(){auth.signOut()}
 </script>
 
 </body>
