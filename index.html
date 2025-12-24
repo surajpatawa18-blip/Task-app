@@ -13,34 +13,60 @@
 <style>
 :root{--o:#ff6a00}
 *{box-sizing:border-box;font-family:Arial}
-body{margin:0;background:#f2f2f2}
-.app{min-height:100vh;background:#fff}
+body{margin:0;background:#f2f2f2;height:100vh}
+.app{height:100vh;background:#fff;display:flex;flex-direction:column}
+
 .header{
- background:var(--o);color:#fff;
- padding:14px 16px;font-size:18px;
- display:flex;justify-content:space-between;align-items:center
+ height:56px;background:var(--o);color:#fff;
+ display:flex;align-items:center;justify-content:space-between;
+ padding:0 16px;font-size:18px
 }
-.screen{display:none}
+.dots{font-size:26px;cursor:pointer}
+.screen{display:none;flex:1;overflow:auto}
 .show{display:block}
+
 .wallet{
- margin:16px;padding:20px;border-radius:16px;
+ margin:16px;
  background:linear-gradient(135deg,#ff6a00,#ff944d);
- color:#fff;text-align:center
+ color:#fff;padding:20px;border-radius:16px;text-align:center
 }
+
+/* SLIDER */
+.slider{
+ margin:0 16px 16px;
+ overflow:hidden;border-radius:14px;position:relative
+}
+.slides{display:flex;transition:.5s}
+.slides img{width:100%;flex-shrink:0;border-radius:14px}
+.dotsWrap{
+ position:absolute;bottom:8px;left:0;right:0;
+ display:flex;justify-content:center
+}
+.dotsWrap span{
+ width:8px;height:8px;border-radius:50%;
+ background:#fff;opacity:.5;margin:0 4px
+}
+.dotsWrap .active{opacity:1;background:#ff6a00}
+
 button{
  width:90%;margin:10px auto;padding:12px;
  border:none;border-radius:10px;
  background:var(--o);color:#fff;font-weight:bold;display:block
 }
 input{
- width:100%;padding:12px;margin-top:10px;
+ width:100%;padding:12px;margin-top:12px;
  border:1px solid #ddd;border-radius:10px
 }
-.list{padding:10px}
-.row{
- background:#fff;margin-bottom:8px;padding:10px;
- border-radius:8px;display:flex;justify-content:space-between
+
+.menuPanel{
+ position:fixed;bottom:-100%;left:0;width:100%;
+ background:#fff;border-radius:20px 20px 0 0;
+ box-shadow:0 -5px 20px rgba(0,0,0,.2);
+ transition:.3s;padding:20px
 }
+.menuPanel.showMenu{bottom:0}
+.menuItem{padding:15px;border-bottom:1px solid #eee}
+.menuItem:last-child{border:none}
 </style>
 </head>
 
@@ -59,139 +85,197 @@ input{
  </div>
 </div>
 
-<!-- 🔒 PAID UNLOCK -->
-<div class="screen" id="unlockScreen">
- <div class="header">Activate Pro</div>
+<!-- PAYMENT -->
+<div class="screen" id="paymentScreen">
+ <div class="header">Complete Payment</div>
  <div style="padding:20px;text-align:center">
-  <h2>₹1299 One-Time Payment</h2>
-  <img src="qr.png" style="width:220px;border-radius:12px">
-  <input id="utrInput" placeholder="Enter UTR Number">
-  <button onclick="submitDeposit()">Submit Payment</button>
-  <p style="font-size:13px;color:#777">Approval ke baad unlock hoga</p>
+  <h3>Pay ₹1299 to Activate Account</h3>
+  <img src="qr.png" style="width:260px;border-radius:16px;border:2px solid #ff6a00">
+  <input id="utr" placeholder="Enter 10–12 digit UTR" maxlength="12">
+  <button id="payBtn" onclick="submitPayment()">Submit Payment</button>
+  <p id="payStatus" style="display:none;color:#ff6a00">⏳ Approval pending…</p>
  </div>
 </div>
 
 <!-- DASHBOARD -->
 <div class="screen" id="dashboardScreen">
- <div class="header">Dashboard</div>
+ <div class="header">
+  <span>Dashboard</span>
+  <span class="dots" onclick="toggleMenu()">⋮</span>
+ </div>
 
  <div class="wallet">
   <div>Balance</div>
   <h1>₹ <span id="coins">0</span></h1>
  </div>
 
- <button onclick="openSpin()">🎡 Spin</button>
- <button onclick="openRefer()">👥 Refer</button>
- <button onclick="openLeaderboard()">🏆 Leaderboard</button>
- <button onclick="openWithdraw()">💸 Withdraw</button>
- <button onclick="logout()">Logout</button>
+ <div class="slider">
+  <div class="slides" id="slides">
+   <img src="slide1.png">
+   <img src="slide2.png">
+   <img src="slide3.png">
+  </div>
+  <div class="dotsWrap" id="dotsWrap"></div>
+ </div>
 </div>
 
 <!-- SPIN -->
 <div class="screen" id="spinScreen">
- <div class="header">Spin</div>
- <div style="text-align:center">
-  <div id="wheel" style="
-   width:240px;height:240px;margin:20px auto;border-radius:50%;
-   border:8px solid #ff6a00;
-   background:conic-gradient(#ffd000 0 45deg,#ff6a00 45 90deg,
-   #ffd000 90 135deg,#ff6a00 135 180deg,
-   #ffd000 180 225deg,#ff6a00 225 270deg,
-   #ffd000 270 315deg,#ff6a00 315 360deg);
-   transition:transform 6s ease-out
-  "></div>
-  <button onclick="spin()">SPIN NOW</button>
-  <button onclick="openDashboard()">Back</button>
+ <div class="header">
+  <span>Spin & Earn</span>
+  <span onclick="showDashboard()">✕</span>
+ </div>
+ <div style="text-align:center;padding:20px">
+  <div style="font-size:26px">⬇️</div>
+  <img id="wheelImg" src="spin.png"
+       style="width:260px;height:260px;border-radius:50%;
+              transition:transform 6s ease-out">
+  <button onclick="spinWheel()">SPIN NOW</button>
+ </div>
+</div>
+
+<!-- TASKS -->
+<div class="screen" id="taskScreen">
+ <div class="header">
+  <span>Tasks & Earn</span>
+  <span onclick="showDashboard()">✕</span>
+ </div>
+ <div style="padding:20px">
+  <button onclick="completeTask('telegram',10)">📢 Join Telegram (+₹10)</button>
+  <button onclick="completeTask('instagram',10)">📸 Follow Instagram (+₹10)</button>
  </div>
 </div>
 
 <!-- REFER -->
 <div class="screen" id="referScreen">
- <div class="header">Refer & Earn</div>
+ <div class="header">
+  <span>Refer & Earn</span>
+  <span onclick="showDashboard()">✕</span>
+ </div>
  <div style="padding:20px">
   <input id="myRef" readonly>
   <input id="refLink" readonly>
-  <button onclick="copyRef()">Copy Link</button>
-  <p>₹3 per referral</p>
+  <button onclick="shareReferral()">Share Referral Link</button>
  </div>
-</div>
-
-<!-- LEADERBOARD -->
-<div class="screen" id="leaderScreen">
- <div class="header">Leaderboard</div>
- <div class="list" id="leaderList"></div>
- <button onclick="openDashboard()">Back</button>
 </div>
 
 <!-- WITHDRAW -->
 <div class="screen" id="withdrawScreen">
- <div class="header">Withdraw</div>
- <input id="wdAmount" placeholder="Min ₹20">
- <button onclick="withdraw()">Request Withdraw</button>
- <button onclick="openDashboard()">Back</button>
+ <div class="header">
+  <span>Withdraw</span>
+  <span onclick="showDashboard()">✕</span>
+ </div>
+ <div style="padding:20px">
+  <input id="wdAmount" placeholder="Min ₹20">
+  <button onclick="withdraw()">Request Withdraw</button>
+ </div>
 </div>
 
 </div>
+
+<!-- MENU -->
+<div class="menuPanel" id="menuPanel">
+ <div class="menuItem" onclick="openSpin()">🎡 Spin</div>
+ <div class="menuItem" onclick="openTasks()">✅ Tasks</div>
+ <div class="menuItem" onclick="openRefer()">👥 Refer & Earn</div>
+ <div class="menuItem" onclick="openWithdraw()">💸 Withdraw</div>
+ <div class="menuItem" onclick="logout()">🚪 Logout</div>
+</div>
+
+<!-- AUDIO -->
+<audio id="spinSound" src="spin.mp3"></audio>
+<audio id="winSound" src="win.mp3"></audio>
 
 <script>
 firebase.initializeApp({
  apiKey:"AIzaSyArCdfGSLZQi8CBbw7is71kxB5036Wlj5E",
  authDomain:"calling-98df6.firebaseapp.com",
  databaseURL:"https://calling-98df6-default-rtdb.firebaseio.com",
- projectId:"calling-98df6"
+ projectId:"calling-98df6",
+ appId:"1:421742710154:web:8ac1621ab81b45edd2cc73"
 });
 
-const auth=firebase.auth(), db=firebase.database();
-let uid=null;
+const auth=firebase.auth();
+const db=firebase.database();
+const spinSound=document.getElementById("spinSound");
+const winSound=document.getElementById("winSound");
 
-/* GET REF FROM LINK */
-const params=new URLSearchParams(window.location.search);
-const refFromLink=params.get("ref");
+let uid=null,spinning=false,slideIndex=0;
 
-/* AUTH */
 auth.onAuthStateChanged(u=>{
- if(!u){show("loginScreen");return;}
+ if(!u){showLogin();return;}
  uid=u.uid;
  db.ref("users/"+uid+"/paid").once("value",s=>{
-  if(s.val()===true){show("dashboardScreen");loadUser();loadLeaderboard();}
-  else show("unlockScreen");
+  s.val()===true ? (showDashboard(),loadUser(),initSlider()) : showPayment();
  });
 });
 
-function show(id){
+function showLogin(){switchScreen("loginScreen")}
+function showDashboard(){switchScreen("dashboardScreen");hideMenu()}
+function showPayment(){switchScreen("paymentScreen")}
+function openSpin(){switchScreen("spinScreen");hideMenu()}
+function openTasks(){switchScreen("taskScreen");hideMenu()}
+function openRefer(){switchScreen("referScreen");hideMenu()}
+function openWithdraw(){switchScreen("withdrawScreen");hideMenu()}
+
+function switchScreen(id){
  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("show"));
  document.getElementById(id).classList.add("show");
 }
+function toggleMenu(){menuPanel.classList.toggle("showMenu")}
+function hideMenu(){menuPanel.classList.remove("showMenu")}
 
-/* NAV */
-const openDashboard=()=>show("dashboardScreen");
-const openSpin=()=>show("spinScreen");
-const openRefer=()=>show("referScreen");
-const openLeaderboard=()=>show("leaderScreen");
-const openWithdraw=()=>show("withdrawScreen");
-
-/* LOGIN / SIGNUP */
-function login(){
- auth.signInWithEmailAndPassword(email.value,password.value);
+/* SLIDER */
+function initSlider(){
+ const slides=document.getElementById("slides");
+ const dots=document.getElementById("dotsWrap");
+ const total=slides.children.length;
+ dots.innerHTML="";
+ for(let i=0;i<total;i++){
+  const d=document.createElement("span");
+  if(i===0)d.classList.add("active");
+  dots.appendChild(d);
+ }
+ setInterval(()=>{
+  slideIndex=(slideIndex+1)%total;
+  slides.style.transform=`translateX(-${slideIndex*100}%)`;
+  [...dots.children].forEach((d,i)=>d.classList.toggle("active",i===slideIndex));
+ },3000);
 }
-function signup(){
- auth.createUserWithEmailAndPassword(email.value,password.value)
- .then(r=>{
-  const code=r.user.uid.slice(0,6).toUpperCase();
-  db.ref("users/"+r.user.uid).set({
-   coins:0,paid:false,
-   referralCode:code,
-   referralCount:0,
-   referredBy:refFromLink||"",
-   lastSpinDate:"",
-   lastWithdrawDate:""
-  });
 
-  if(refFromLink) rewardReferrer(refFromLink);
+/* AUTH */
+function signup(){
+ auth.createUserWithEmailAndPassword(email.value,password.value).then(r=>{
+  const myCode=r.user.uid.substring(0,6).toUpperCase();
+  const ref=refInput.value.trim().toUpperCase();
+  db.ref("users/"+r.user.uid).set({
+   coins:0,
+   referralCode:myCode,
+   referredBy:ref,
+   referralPaid:false,
+   paid:false,
+   tasks:{},
+   lastSpin:""
+  });
+  if(ref){
+   db.ref("users").orderByChild("referralCode").equalTo(ref).once("value",s=>{
+    s.forEach(u=>{
+     if(!u.val().referralPaid){
+      db.ref("users/"+u.key+"/coins").transaction(c=>(c||0)+50);
+      db.ref("users/"+u.key+"/referralPaid").set(true);
+     }
+    });
+   });
+  }
+  alert("Signup successful. Please complete payment.");
  });
 }
 
-/* USER */
+function login(){
+ auth.signInWithEmailAndPassword(email.value,password.value)
+ .catch(e=>alert(e.message));
+}
+
 function loadUser(){
  db.ref("users/"+uid).on("value",s=>{
   coins.innerText=s.val().coins||0;
@@ -200,86 +284,75 @@ function loadUser(){
  });
 }
 
-/* REFERRAL REWARD */
-function rewardReferrer(code){
- db.ref("users").once("value",snap=>{
-  snap.forEach(u=>{
-   if(u.val().referralCode===code){
-    db.ref("users/"+u.key).update({
-     coins:(u.val().coins||0)+3,
-     referralCount:(u.val().referralCount||0)+1
-    });
-   }
-  });
- });
-}
-function copyRef(){
- navigator.clipboard.writeText(refLink.value);
- alert("Referral link copied");
+function shareReferral(){
+ navigator.share
+ ? navigator.share({title:"Earn Money App",url:refLink.value})
+ : navigator.clipboard.writeText(refLink.value);
 }
 
-/* LEADERBOARD */
-function loadLeaderboard(){
- db.ref("users").orderByChild("referralCount").limitToLast(10)
- .on("value",snap=>{
-  leaderList.innerHTML="";
-  snap.forEach(u=>{
-   leaderList.innerHTML=
-    `<div class="row">
-      <span>${u.val().referralCode}</span>
-      <b>${u.val().referralCount||0}</b>
-     </div>`+leaderList.innerHTML;
-  });
+/* PAYMENT */
+function submitPayment(){
+ const v=utr.value.trim().toUpperCase();
+ if(!/^[A-Z0-9]{10,12}$/.test(v)) return alert("Invalid UTR");
+ payBtn.disabled=true;
+ db.ref("payments").orderByChild("utr").equalTo(v).once("value",s=>{
+  if(s.exists()){alert("UTR already used");payBtn.disabled=false;return;}
+  db.ref("payments").push({uid,amount:1299,utr:v,status:"pending",time:Date.now()});
+  payStatus.style.display="block";
+  payBtn.style.display="none";
+ });
+}
+
+/* TASK */
+function completeTask(task,amt){
+ const r=db.ref("users/"+uid+"/tasks/"+task);
+ r.once("value",s=>{
+  if(s.exists()) return alert("Task already completed");
+  r.set(true);
+  db.ref("users/"+uid+"/coins").transaction(c=>(c||0)+amt);
+  alert("Task completed +₹"+amt);
  });
 }
 
 /* SPIN */
-function spin(){
+function spinWheel(){
+ if(spinning) return;
  const today=new Date().toDateString();
  const r=db.ref("users/"+uid);
  r.once("value",s=>{
-  if(s.val().lastSpinDate===today){alert("Aaj spin ho chuka");return;}
-  const win=Math.floor(Math.random()*8)+1;
-  wheel.style.transform=`rotate(${360*5+45*(win-1)}deg)`;
+  if(s.val().lastSpin===today){
+   alert("Aaj ka spin ho chuka");
+   return;
+  }
+  spinning=true;
+  const win=Math.floor(Math.random()*10)+1;
+  const deg=360*5+Math.floor(Math.random()*360);
+  spinSound.currentTime=0; spinSound.play();
+  wheelImg.style.transform="rotate("+deg+"deg)";
   setTimeout(()=>{
-   r.update({coins:s.val().coins+win,lastSpinDate:today});
+   spinSound.pause();
+   winSound.currentTime=0; winSound.play();
+   r.child("lastSpin").set(today);
+   r.child("coins").transaction(c=>(c||0)+win);
    alert("You won ₹"+win);
+   spinning=false;
   },6000);
  });
 }
 
 /* WITHDRAW */
 function withdraw(){
- const amt=parseInt(wdAmount.value);
- if(amt<20)return alert("Min ₹20");
- const r=db.ref("users/"+uid);
- r.once("value",s=>{
-  if(s.val().coins<amt)return alert("Low balance");
-  if(s.val().lastWithdrawDate===new Date().toDateString())
-   return alert("Aaj already withdraw");
-  r.update({
-   coins:s.val().coins-amt,
-   lastWithdrawDate:new Date().toDateString()
-  });
-  db.ref("withdrawals").push({uid,amount:amt,status:"pending"});
+ const a=parseInt(wdAmount.value);
+ if(a<20)return alert("Min ₹20");
+ db.ref("users/"+uid+"/coins").once("value",s=>{
+  if(s.val()<a)return alert("Low balance");
+  db.ref("users/"+uid+"/coins").set(s.val()-a);
+  db.ref("withdrawals").push({uid,amount:a,status:"pending"});
   alert("Withdraw requested");
- });
-}
-
-/* DEPOSIT (ANTI-SPAM) */
-function submitDeposit(){
- const utr=utrInput.value.trim();
- if(utr.length<8)return alert("Valid UTR");
- db.ref("utrUsed/"+utr).once("value",u=>{
-  if(u.exists())return alert("UTR already used");
-  db.ref("deposits").push({uid,utr,amount:1299,status:"pending"});
-  db.ref("utrUsed/"+utr).set(true);
-  alert("Payment submitted");
  });
 }
 
 function logout(){auth.signOut()}
 </script>
-
 </body>
 </html>
