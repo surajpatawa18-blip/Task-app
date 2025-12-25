@@ -5,7 +5,6 @@
 <title>Earn Money App</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Firebase SDK v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -15,7 +14,6 @@
 *{box-sizing:border-box;font-family:Arial}
 body{margin:0;background:#f2f2f2;height:100vh}
 .app{height:100vh;background:#fff;display:flex;flex-direction:column}
-
 .header{
  height:56px;background:var(--o);color:#fff;
  display:flex;align-items:center;justify-content:space-between;
@@ -24,18 +22,25 @@ body{margin:0;background:#f2f2f2;height:100vh}
 .dots{font-size:26px;cursor:pointer}
 .screen{display:none;flex:1;overflow:auto}
 .show{display:block}
-
 .wallet{
- margin:16px;
- background:linear-gradient(135deg,#ff6a00,#ff944d);
+ margin:16px;background:linear-gradient(135deg,#ff6a00,#ff944d);
  color:#fff;padding:20px;border-radius:16px;text-align:center
+}
+.uidBox{
+ text-align:center;
+ font-size:13px;
+ color:#444;
+ margin-top:10px
+}
+.uidBox button{
+ width:auto;
+ padding:6px 12px;
+ font-size:12px;
+ margin-top:6px
 }
 
 /* SLIDER */
-.slider{
- margin:0 16px 16px;
- overflow:hidden;border-radius:14px;position:relative
-}
+.slider{margin:0 16px 16px;overflow:hidden;border-radius:14px;position:relative}
 .slides{display:flex;transition:.5s}
 .slides img{width:100%;flex-shrink:0;border-radius:14px}
 .dotsWrap{
@@ -67,10 +72,27 @@ input{
 .menuPanel.showMenu{bottom:0}
 .menuItem{padding:15px;border-bottom:1px solid #eee}
 .menuItem:last-child{border:none}
+
+/* PENDING OVERLAY */
+#pendingOverlay{
+ display:none;
+ position:fixed;
+ top:0;left:0;
+ width:100%;height:100%;
+ background:rgba(0,0,0,0.85);
+ z-index:9999;
+ align-items:center;
+ justify-content:center;
+ flex-direction:column;
+ color:white;
+ text-align:center
+}
+#pendingOverlay img{width:260px;border-radius:16px}
 </style>
 </head>
 
 <body>
+
 <div class="app">
 
 <!-- LOGIN -->
@@ -93,7 +115,6 @@ input{
   <img src="qr.png" style="width:260px;border-radius:16px;border:2px solid #ff6a00">
   <input id="utr" placeholder="Enter 10–12 digit UTR" maxlength="12">
   <button id="payBtn" onclick="submitPayment()">Submit Payment</button>
-  <p id="payStatus" style="display:none;color:#ff6a00">⏳ Approval pending…</p>
  </div>
 </div>
 
@@ -109,6 +130,12 @@ input{
   <h1>₹ <span id="coins">0</span></h1>
  </div>
 
+ <!-- UID -->
+ <div class="uidBox">
+  User ID: <span id="userUid"></span><br>
+  <button onclick="copyUid()">Copy UID</button>
+ </div>
+
  <div class="slider">
   <div class="slides" id="slides">
    <img src="slide1.png">
@@ -121,10 +148,7 @@ input{
 
 <!-- SPIN -->
 <div class="screen" id="spinScreen">
- <div class="header">
-  <span>Spin & Earn</span>
-  <span onclick="showDashboard()">✕</span>
- </div>
+ <div class="header"><span>Spin</span><span onclick="showDashboard()">✕</span></div>
  <div style="text-align:center;padding:20px">
   <div style="font-size:26px">⬇️</div>
   <img id="wheelImg" src="spin.png"
@@ -136,35 +160,26 @@ input{
 
 <!-- TASKS -->
 <div class="screen" id="taskScreen">
- <div class="header">
-  <span>Tasks & Earn</span>
-  <span onclick="showDashboard()">✕</span>
- </div>
+ <div class="header"><span>Tasks</span><span onclick="showDashboard()">✕</span></div>
  <div style="padding:20px">
-  <button onclick="completeTask('telegram',10)">📢 Join Telegram (+₹10)</button>
-  <button onclick="completeTask('instagram',10)">📸 Follow Instagram (+₹10)</button>
+  <button onclick="completeTask('telegram',10)">Join Telegram (+₹10)</button>
+  <button onclick="completeTask('instagram',10)">Follow Instagram (+₹10)</button>
  </div>
 </div>
 
 <!-- REFER -->
 <div class="screen" id="referScreen">
- <div class="header">
-  <span>Refer & Earn</span>
-  <span onclick="showDashboard()">✕</span>
- </div>
+ <div class="header"><span>Refer</span><span onclick="showDashboard()">✕</span></div>
  <div style="padding:20px">
   <input id="myRef" readonly>
   <input id="refLink" readonly>
-  <button onclick="shareReferral()">Share Referral Link</button>
+  <button onclick="shareReferral()">Share Link</button>
  </div>
 </div>
 
 <!-- WITHDRAW -->
 <div class="screen" id="withdrawScreen">
- <div class="header">
-  <span>Withdraw</span>
-  <span onclick="showDashboard()">✕</span>
- </div>
+ <div class="header"><span>Withdraw</span><span onclick="showDashboard()">✕</span></div>
  <div style="padding:20px">
   <input id="wdAmount" placeholder="Min ₹20">
   <button onclick="withdraw()">Request Withdraw</button>
@@ -177,12 +192,17 @@ input{
 <div class="menuPanel" id="menuPanel">
  <div class="menuItem" onclick="openSpin()">🎡 Spin</div>
  <div class="menuItem" onclick="openTasks()">✅ Tasks</div>
- <div class="menuItem" onclick="openRefer()">👥 Refer & Earn</div>
+ <div class="menuItem" onclick="openRefer()">👥 Refer</div>
  <div class="menuItem" onclick="openWithdraw()">💸 Withdraw</div>
  <div class="menuItem" onclick="logout()">🚪 Logout</div>
 </div>
 
-<!-- AUDIO -->
+<!-- PENDING -->
+<div id="pendingOverlay">
+ <img src="pending.png">
+ <p style="margin-top:15px">⏳ Payment submitted<br>Waiting for admin approval</p>
+</div>
+
 <audio id="spinSound" src="spin.mp3"></audio>
 <audio id="winSound" src="win.mp3"></audio>
 
@@ -197,19 +217,31 @@ firebase.initializeApp({
 
 const auth=firebase.auth();
 const db=firebase.database();
-const spinSound=document.getElementById("spinSound");
-const winSound=document.getElementById("winSound");
-
 let uid=null,spinning=false,slideIndex=0;
 
+/* AUTH */
 auth.onAuthStateChanged(u=>{
  if(!u){showLogin();return;}
  uid=u.uid;
- db.ref("users/"+uid+"/paid").once("value",s=>{
+
+ db.ref("users/"+uid+"/paid").once("value").then(s=>{
   s.val()===true ? (showDashboard(),loadUser(),initSlider()) : showPayment();
  });
+
+ watchPaymentApproval();
 });
 
+/* AUTO UNLOCK */
+function watchPaymentApproval(){
+ db.ref("users/"+uid+"/paid").on("value",s=>{
+  if(s.val()===true){
+   document.getElementById("pendingOverlay").style.display="none";
+   showDashboard(); loadUser(); initSlider();
+  }
+ });
+}
+
+/* NAV */
 function showLogin(){switchScreen("loginScreen")}
 function showDashboard(){switchScreen("dashboardScreen");hideMenu()}
 function showPayment(){switchScreen("paymentScreen")}
@@ -217,7 +249,6 @@ function openSpin(){switchScreen("spinScreen");hideMenu()}
 function openTasks(){switchScreen("taskScreen");hideMenu()}
 function openRefer(){switchScreen("referScreen");hideMenu()}
 function openWithdraw(){switchScreen("withdrawScreen");hideMenu()}
-
 function switchScreen(id){
  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("show"));
  document.getElementById(id).classList.add("show");
@@ -243,47 +274,42 @@ function initSlider(){
  },3000);
 }
 
-/* AUTH */
+/* AUTH FUNCTIONS */
 function signup(){
  auth.createUserWithEmailAndPassword(email.value,password.value).then(r=>{
-  const myCode=r.user.uid.substring(0,6).toUpperCase();
-  const ref=refInput.value.trim().toUpperCase();
+  const code=r.user.uid.substring(0,6).toUpperCase();
   db.ref("users/"+r.user.uid).set({
    coins:0,
-   referralCode:myCode,
-   referredBy:ref,
-   referralPaid:false,
+   referralCode:code,
    paid:false,
    tasks:{},
    lastSpin:""
   });
-  if(ref){
-   db.ref("users").orderByChild("referralCode").equalTo(ref).once("value",s=>{
-    s.forEach(u=>{
-     if(!u.val().referralPaid){
-      db.ref("users/"+u.key+"/coins").transaction(c=>(c||0)+50);
-      db.ref("users/"+u.key+"/referralPaid").set(true);
-     }
-    });
-   });
-  }
   alert("Signup successful. Please complete payment.");
  });
 }
-
 function login(){
  auth.signInWithEmailAndPassword(email.value,password.value)
  .catch(e=>alert(e.message));
 }
 
+/* LOAD USER */
 function loadUser(){
  db.ref("users/"+uid).on("value",s=>{
   coins.innerText=s.val().coins||0;
   myRef.value=s.val().referralCode;
   refLink.value=location.origin+location.pathname+"?ref="+s.val().referralCode;
+  userUid.innerText = uid;
  });
 }
 
+/* COPY UID */
+function copyUid(){
+ navigator.clipboard.writeText(uid);
+ alert("UID copied");
+}
+
+/* REFER */
 function shareReferral(){
  navigator.share
  ? navigator.share({title:"Earn Money App",url:refLink.value})
@@ -295,12 +321,15 @@ function submitPayment(){
  const v=utr.value.trim().toUpperCase();
  if(!/^[A-Z0-9]{10,12}$/.test(v)) return alert("Invalid UTR");
  payBtn.disabled=true;
- db.ref("payments").orderByChild("utr").equalTo(v).once("value",s=>{
+ db.ref("payments").orderByChild("utr").equalTo(v).once("value")
+ .then(s=>{
   if(s.exists()){alert("UTR already used");payBtn.disabled=false;return;}
-  db.ref("payments").push({uid,amount:1299,utr:v,status:"pending",time:Date.now()});
-  payStatus.style.display="block";
-  payBtn.style.display="none";
- });
+  return db.ref("payments").push({
+   uid:uid,amount:1299,utr:v,status:"pending",time:Date.now()
+  });
+ })
+ .then(()=>{ pendingOverlay.style.display="flex"; })
+ .catch(e=>{ alert(e.message); payBtn.disabled=false; });
 }
 
 /* TASK */
@@ -320,18 +349,12 @@ function spinWheel(){
  const today=new Date().toDateString();
  const r=db.ref("users/"+uid);
  r.once("value",s=>{
-  if(s.val().lastSpin===today){
-   alert("Aaj ka spin ho chuka");
-   return;
-  }
+  if(s.val().lastSpin===today){alert("Aaj ka spin ho chuka");return;}
   spinning=true;
   const win=Math.floor(Math.random()*10)+1;
-  const deg=360*5+Math.floor(Math.random()*360);
-  spinSound.currentTime=0; spinSound.play();
+  const deg=360*5+Math.random()*360;
   wheelImg.style.transform="rotate("+deg+"deg)";
   setTimeout(()=>{
-   spinSound.pause();
-   winSound.currentTime=0; winSound.play();
    r.child("lastSpin").set(today);
    r.child("coins").transaction(c=>(c||0)+win);
    alert("You won ₹"+win);
@@ -355,4 +378,4 @@ function withdraw(){
 function logout(){auth.signOut()}
 </script>
 </body>
-</html>
+  </html>
