@@ -221,16 +221,31 @@ let uid=null,spinning=false,slideIndex=0;
 
 /* AUTH */
 auth.onAuthStateChanged(u=>{
- if(!u){showLogin();return;}
- uid=u.uid;
+ if(!u){
+  hideMenu();
 
- db.ref("users/"+uid+"/paid").once("value").then(s=>{
-  s.val()===true ? (showDashboard(),loadUser(),initSlider()) : showPayment();
- });
+  document.querySelectorAll(".screen").forEach(s=>{
+   s.classList.remove("show");
+  });
+
+  showLogin();
+  return;
+ }
+
+ uid = u.uid;
 
  watchPaymentApproval();
-});
 
+ db.ref("users/"+uid+"/paid").once("value").then(s=>{
+  if(s.val() === true){
+   showDashboard();
+   loadUser();
+   initSlider();
+  }else{
+   showPayment();
+  }
+ });
+});
 /* AUTO UNLOCK */
 function watchPaymentApproval(){
  db.ref("users/"+uid+"/paid").on("value",s=>{
