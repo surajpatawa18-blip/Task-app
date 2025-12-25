@@ -375,7 +375,26 @@ function withdraw(){
  });
 }
 
-function logout(){auth.signOut()}
+ function logout(){
+ auth.signOut().then(()=>{
+  // 🔥 sab screens hide
+  document.querySelectorAll(".screen").forEach(s=>{
+   s.classList.remove("show");
+  });
+
+  // 🔥 menu band
+  hideMenu();
+
+  // 🔥 sensitive data clear
+  document.getElementById("coins").innerText = "0";
+  if(document.getElementById("userUid")){
+   document.getElementById("userUid").innerText = "";
+  }
+
+  // 🔥 login screen dikhao
+  showLogin();
+ });
+  }
 </script>
 </body>
   </html>
