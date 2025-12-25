@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Earn Money App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<style>
+:root{--o:#ff6a00}
+*{box-sizing:border-box;font-family:Arial}
+body{margin:0;background:#f2f2f2;height:100vh}
+.app{height:100vh;background:#fff;display:flex;flex-direction:column}
+.header{
+ height:56px;background:var(--o);color:#fff;
+ display:flex;align-items:center;justify-content:space-between;
+ padding:0 16px;font-size:18px
+}
+.dots{font-size:26px;cursor:pointer}
+.screen{display:none;flex:1;overflow:auto}
+.show{display:block}
+.wallet{
+ margin:16px;background:linear-gradient(135deg,#ff6a00,#ff944d);
+ color:#fff;padding:20px;border-radius:16px;text-align:center
+}
+.uidBox{
+ text-align:center;
+ font-size:13px;
+ color:#444;
+ margin-top:10px
+}
+.uidBox button{
+ width:auto;
+ padding:6px 12px;
+ font-size:12px;
+ margin-top:6px
+}
+
+/* SLIDER */
+.slider{margin:0 16px 16px;overflow:hidden;border-radius:14px;position:relative}
+.slides{display:flex;transition:.5s}
+.slides img{width:100%;flex-shrink:0;border-radius:14px}
+.dotsWrap{
+ position:absolute;bottom:8px;left:0;right:0;
+ display:flex;justify-content:center
+}
+.dotsWrap span{
+ width:8px;height:8px;border-radius:50%;
+ background:#fff;opacity:.5;margin:0 4px
+}
+.dotsWrap .active{opacity:1;background:#ff6a00}
+
+button{
+ width:90%;margin:10px auto;padding:12px;
+ border:none;border-radius:10px;
+ background:var(--o);color:#fff;font-weight:bold;display:block
+}
+input{
+ width:100%;padding:12px;margin-top:12px;
+ border:1px solid #ddd;border-radius:10px
+}
+
+.menuPanel{
+ position:fixed;bottom:-100%;left:0;width:100%;
+ background:#fff;border-radius:20px 20px 0 0;
+ box-shadow:0 -5px 20px rgba(0,0,0,.2);
+ transition:.3s;padding:20px
+}
+.menuPanel.showMenu{bottom:0}
+.menuItem{padding:15px;border-bottom:1px solid #eee}
+.menuItem:last-child{border:none}
+
+/* PENDING OVERLAY */
+#pendingOverlay{
+ display:none;
+ position:fixed;
+ top:0;left:0;
+ width:100%;height:100%;
+ background:rgba(0,0,0,0.85);
+ z-index:9999;
+ align-items:center;
+ justify-content:center;
+ flex-direction:column;
+ color:white;
+ text-align:center
+}
+#pendingOverlay img{width:260px;border-radius:16px}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<!-- LOGIN -->
+<div class="screen show" id="loginScreen">
+ <div class="header">Login / Signup</div>
+ <div style="padding:20px">
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <input id="refInput" placeholder="Referral Code (optional)">
+  <button onclick="login()">Login</button>
+  <button onclick="signup()">Signup</button>
+ </div>
+</div>
+
+<!-- PAYMENT -->
+<div class="screen" id="paymentScreen">
+ <div class="header">Complete Payment</div>
+ <div style="padding:20px;text-align:center">
+  <h3>Pay ₹1299 to Activate Account</h3>
+  <img src="qr.png" style="width:260px;border-radius:16px;border:2px solid #ff6a00">
+  <input id="utr" placeholder="Enter 10–12 digit UTR" maxlength="12">
+  <button id="payBtn" onclick="submitPayment()">Submit Payment</button>
+ </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="screen" id="dashboardScreen">
+ <div class="header">
+  <span>Dashboard</span>
+  <span class="dots" onclick="toggleMenu()">⋮</span>
+ </div>
+
+ <div class="wallet">
+  <div>Balance</div>
+  <h1>₹ <span id="coins">0</span></h1>
+ </div>
+
+ <!-- UID -->
+ <div class="uidBox">
+  User ID: <span id="userUid"></span><br>
+  <button onclick="copyUid()">Copy UID</button>
+ </div>
+
+ <div class="slider">
+  <div class="slides" id="slides">
+   <img src="slide1.png">
+   <img src="slide2.png">
+   <img src="slide3.png">
+  </div>
+  <div class="dotsWrap" id="dotsWrap"></div>
+ </div>
+</div>
+
+<!-- SPIN -->
+<div class="screen" id="spinScreen">
+ <div class="header"><span>Spin</span><span onclick="showDashboard()">✕</span></div>
+ <div style="text-align:center;padding:20px">
+  <div style="font-size:26px">⬇️</div>
+  <img id="wheelImg" src="spin.png"
+       style="width:260px;height:260px;border-radius:50%;
+              transition:transform 6s ease-out">
+  <button onclick="spinWheel()">SPIN NOW</button>
+ </div>
+</div>
+
+<!-- TASKS -->
+<div class="screen" id="taskScreen">
+ <div class="header"><span>Tasks</span><span onclick="showDashboard()">✕</span></div>
+ <div style="padding:20px">
+  <button onclick="completeTask('telegram',10)">Join Telegram (+₹10)</button>
+  <button onclick="completeTask('instagram',10)">Follow Instagram (+₹10)</button>
+ </div>
+</div>
+
+<!-- REFER -->
+<div class="screen" id="referScreen">
+ <div class="header"><span>Refer</span><span onclick="showDashboard()">✕</span></div>
+ <div style="padding:20px">
+  <input id="myRef" readonly>
+  <input id="refLink" readonly>
+  <button onclick="shareReferral()">Share Link</button>
+ </div>
+</div>
+
+<!-- WITHDRAW -->
+<div class="screen" id="withdrawScreen">
+ <div class="header"><span>Withdraw</span><span onclick="showDashboard()">✕</span></div>
+ <div style="padding:20px">
+  <input id="wdAmount" placeholder="Min ₹20">
+  <button onclick="withdraw()">Request Withdraw</button>
+ </div>
+</div>
+
+</div>
+
+<!-- MENU -->
+<div class="menuPanel" id="menuPanel">
+ <div class="menuItem" onclick="openSpin()">🎡 Spin</div>
+ <div class="menuItem" onclick="openTasks()">✅ Tasks</div>
+ <div class="menuItem" onclick="openRefer()">👥 Refer</div>
+ <div class="menuItem" onclick="openWithdraw()">💸 Withdraw</div>
+ <div class="menuItem" onclick="logout()">🚪 Logout</div>
+</div>
+
+<!-- PENDING -->
+<div id="pendingOverlay">
+ <img src="pending.png">
+ <p style="margin-top:15px">⏳ Payment submitted<br>Waiting for admin approval</p>
+</div>
+
+<audio id="spinSound" src="spin.mp3"></audio>
+<audio id="winSound" src="win.mp3"></audio>
+
+<script>
+firebase.initializeApp({
+ apiKey:"AIzaSyArCdfGSLZQi8CBbw7is71kxB5036Wlj5E",
+ authDomain:"calling-98df6.firebaseapp.com",
+ databaseURL:"https://calling-98df6-default-rtdb.firebaseio.com",
+ projectId:"calling-98df6",
+ appId:"1:421742710154:web:8ac1621ab81b45edd2cc73"
+});
+
+const auth=firebase.auth();
+const db=firebase.database();
+let uid=null,spinning=false,slideIndex=0;
+
+/* AUTH */
+auth.onAuthStateChanged(u=>{
+ if(!u){showLogin();return;}
+ uid=u.uid;
+
+ db.ref("users/"+uid+"/paid").once("value").then(s=>{
+  s.val()===true ? (showDashboard(),loadUser(),initSlider()) : showPayment();
+ });
+
+ watchPaymentApproval();
+});
+
+/* AUTO UNLOCK */
+function watchPaymentApproval(){
+ db.ref("users/"+uid+"/paid").on("value",s=>{
+  if(s.val()===true){
+   document.getElementById("pendingOverlay").style.display="none";
+   showDashboard(); loadUser(); initSlider();
+  }
+ });
+}
+
+/* NAV */
+function showLogin(){switchScreen("loginScreen")}
+function showDashboard(){switchScreen("dashboardScreen");hideMenu()}
+function showPayment(){switchScreen("paymentScreen")}
+function openSpin(){switchScreen("spinScreen");hideMenu()}
+function openTasks(){switchScreen("taskScreen");hideMenu()}
+function openRefer(){switchScreen("referScreen");hideMenu()}
+function openWithdraw(){switchScreen("withdrawScreen");hideMenu()}
+function switchScreen(id){
+ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("show"));
+ document.getElementById(id).classList.add("show");
+}
+function toggleMenu(){menuPanel.classList.toggle("showMenu")}
+function hideMenu(){menuPanel.classList.remove("showMenu")}
+
+/* SLIDER */
+function initSlider(){
+ const slides=document.getElementById("slides");
+ const dots=document.getElementById("dotsWrap");
+ const total=slides.children.length;
+ dots.innerHTML="";
+ for(let i=0;i<total;i++){
+  const d=document.createElement("span");
+  if(i===0)d.classList.add("active");
+  dots.appendChild(d);
+ }
+ setInterval(()=>{
+  slideIndex=(slideIndex+1)%total;
+  slides.style.transform=`translateX(-${slideIndex*100}%)`;
+  [...dots.children].forEach((d,i)=>d.classList.toggle("active",i===slideIndex));
+ },3000);
+}
+
+/* AUTH FUNCTIONS */
+function signup(){
+ auth.createUserWithEmailAndPassword(email.value,password.value).then(r=>{
+  const code=r.user.uid.substring(0,6).toUpperCase();
+  db.ref("users/"+r.user.uid).set({
+   coins:0,
+   referralCode:code,
+   paid:false,
+   tasks:{},
+   lastSpin:""
+  });
+  alert("Signup successful. Please complete payment.");
+ });
+}
+function login(){
+ auth.signInWithEmailAndPassword(email.value,password.value)
+ .catch(e=>alert(e.message));
+}
+
+/* LOAD USER */
+function loadUser(){
+ db.ref("users/"+uid).on("value",s=>{
+  coins.innerText=s.val().coins||0;
+  myRef.value=s.val().referralCode;
+  refLink.value=location.origin+location.pathname+"?ref="+s.val().referralCode;
+  userUid.innerText = uid;
+ });
+}
+
+/* COPY UID */
+function copyUid(){
+ navigator.clipboard.writeText(uid);
+ alert("UID copied");
+}
+
+/* REFER */
+function shareReferral(){
+ navigator.share
+ ? navigator.share({title:"Earn Money App",url:refLink.value})
+ : navigator.clipboard.writeText(refLink.value);
+}
+
+/* PAYMENT */
+function submitPayment(){
+ const v=utr.value.trim().toUpperCase();
+ if(!/^[A-Z0-9]{10,12}$/.test(v)) return alert("Invalid UTR");
+ payBtn.disabled=true;
+ db.ref("payments").orderByChild("utr").equalTo(v).once("value")
+ .then(s=>{
+  if(s.exists()){alert("UTR already used");payBtn.disabled=false;return;}
+  return db.ref("payments").push({
+   uid:uid,amount:1299,utr:v,status:"pending",time:Date.now()
+  });
+ })
+ .then(()=>{ pendingOverlay.style.display="flex"; })
+ .catch(e=>{ alert(e.message); payBtn.disabled=false; });
+}
+
+/* TASK */
+function completeTask(task,amt){
+ const r=db.ref("users/"+uid+"/tasks/"+task);
+ r.once("value",s=>{
+  if(s.exists()) return alert("Task already completed");
+  r.set(true);
+  db.ref("users/"+uid+"/coins").transaction(c=>(c||0)+amt);
+  alert("Task completed +₹"+amt);
+ });
+}
+
+/* SPIN */
+function spinWheel(){
+ if(spinning) return;
+ const today=new Date().toDateString();
+ const r=db.ref("users/"+uid);
+ r.once("value",s=>{
+  if(s.val().lastSpin===today){alert("Aaj ka spin ho chuka");return;}
+  spinning=true;
+  const win=Math.floor(Math.random()*10)+1;
+  const deg=360*5+Math.random()*360;
+  wheelImg.style.transform="rotate("+deg+"deg)";
+  setTimeout(()=>{
+   r.child("lastSpin").set(today);
+   r.child("coins").transaction(c=>(c||0)+win);
+   alert("You won ₹"+win);
+   spinning=false;
+  },6000);
+ });
+}
+
+/* WITHDRAW */
+function withdraw(){
+ const a=parseInt(wdAmount.value);
+ if(a<20)return alert("Min ₹20");
+ db.ref("users/"+uid+"/coins").once("value",s=>{
+  if(s.val()<a)return alert("Low balance");
+  db.ref("users/"+uid+"/coins").set(s.val()-a);
+  db.ref("withdrawals").push({uid,amount:a,status:"pending"});
+  alert("Withdraw requested");
+ });
+}
+
+function logout(){auth.signOut()}
+</script>
+</body>
+  </html>
